@@ -11,4 +11,8 @@ There are some python files that have filenames that end with tuning that have h
 
 Also, need to complete Feature Engineering to check for Improvement in Model Predictability.
 
-The final deliverable will have federated learning implementation with PyTorch and PySft.
+Preliminary federated learning implementation with PyTorch and PySft is included herein.
+
+Note that the train.csv and test.csv are only for the federated ML modeling. 
+
+Final Deliverables to include better model refinement and cleanup.
