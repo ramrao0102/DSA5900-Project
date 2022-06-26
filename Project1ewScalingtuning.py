@@ -29,6 +29,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_score
@@ -40,7 +44,8 @@ from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import roc_curve
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV  
+from sklearn.model_selection import GridSearchCV    
+
 
 filename = 'initialmodel2.csv'
 
@@ -78,25 +83,78 @@ print(y_train.head(), len(y_train))
 
 print(y_test.head(), len(y_test))
 
-# MNB Model Fitting with GridSearchCV
+# Split train into train1 and val1
+
+X_train1, X_val1, y_train1, y_val1 = train_test_split(X_train, y_train, random_state = 1, test_size = 0.15)
+
+print(X_train1.head(), len(X_train1))
+
+print(X_val1.head(), len(X_val1))
+
+print(y_train1.head(), len(y_train1))
+
+print(y_val1.head(), len(y_val1))
+
+# Split dataframe into X and y
+
+X = df.iloc[:, :-1]
+
+Y = df.iloc[:,-1].astype(int)
+
+# Split into train and test
+
+X_train, X_test, y_train, y_test = train_test_split(X, Y, random_state = 1, test_size = 0.2)
+
+print(X_train.head(), len(X_train))
+
+print(X_test.head(), len(X_test))
+
+print(y_train.head(), len(y_train))
+
+print(y_test.head(), len(y_test))
+
+# Split train into train1 and val1
+
+X_train1, X_val1, y_train1, y_val1 = train_test_split(X_train, y_train, random_state = 1, test_size = 0.15)
+
+print(X_train1.head(), len(X_train1))
+
+print(X_val1.head(), len(X_val1))
+
+print(y_train1.head(), len(y_train1))
+
+print(y_val1.head(), len(y_val1))
+
+# AdaBoost Model Fitting with GridSearchCV
 # GridSearch with varying alpha values
 # 5 fold cross validation is being checked
 
-mnb_Pipeline = Pipeline([('mnb', MultinomialNB())])
+rf_Pipeline = Pipeline([('rf', RandomForestClassifier())])
 
-param_grid = {'mnb__alpha': [1e-4, 1e-3, 1e-2, 1e-1, 1]}
+param_grid = [    
+    
+    {'rf__n_estimators' : [50, 100, 200],
+     
+    'rf__criterion' : ['gini', 'entropy'],
+    
+    'rf__max_features' : ['sqrt', 'log2', 'auto'],
+    
+     
+    }
 
-gs_mnb = GridSearchCV(mnb_Pipeline, param_grid, cv = 5, verbose =2)
+]
 
-gs_mnb = gs_mnb.fit(X_train, y_train)
+gs_rf = GridSearchCV(rf_Pipeline, param_grid, cv = 5, verbose =2)
 
-print(gs_mnb.estimator.get_params())
+gs_rf  = gs_rf.fit(X_train, y_train)
 
-print(gs_mnb.best_index_)
+print(gs_rf.estimator.get_params())
 
-print(gs_mnb.best_params_)
+print(gs_rf.best_index_)
 
-cv_results = gs_mnb.cv_results_
+print(gs_rf.best_params_)
+
+cv_results = gs_rf.cv_results_
 
 # print results of cross validation training
 
@@ -113,11 +171,13 @@ pd.set_option('display.max_colwidth', 100)
 
 print(results_df)
 
-best_gs_mnb_test_score = gs_mnb.score(X_test,  y_test)
+results_df.to_csv("RandomForestResults.csv")
 
-print(best_gs_mnb_test_score)
+best_gs_rf_test_score =gs_rf.score(X_test,  y_test)
 
-y_predict2 = gs_mnb.predict(X_test)
+print(best_gs_rf_test_score)
+
+y_predict2 = gs_rf.predict(X_test)
 mse2 = mean_squared_error(y_predict2, y_test, squared=False)
 
 print(mse2)
@@ -135,82 +195,40 @@ auc= roc_auc_score(y_test, y_predict2)
 
 print(auc)
 
-# function for ROC Curve Plotting
-
-def plot_roc_curve(fper, tper):  
-    plt.plot(fper, tper, color='orange', label='ROC')
-    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    plt.legend()
-    plt.show()
-    
-probs = gs_mnb.predict_proba(X_test)  
-probs = probs[:, 1]  
-fper, tper, thresholds = roc_curve(y_test, probs) 
-plot_roc_curve(fper, tper)
- 
 #Model with Best Params, this warrants a recheck.
 # I picked the best model from GridSearchCV and retrained on the same set as I was not able to retrieve from GridSearchCV
 
-mnb_clf = MultinomialNB(alpha= 1.0)
+rf_clf = RandomForestClassifier(criterion='entropy', n_estimators = 200, max_features = 'auto')
 
-mnb_clf.fit(X_train, y_train)
+rf_clf.fit(X_train, y_train)
 
-y_predict3 = mnb_clf.predict(X_test)
+y_predict3 = rf_clf.predict(X_test)
 mse3 = mean_squared_error(y_predict3, y_test, squared=False)
 
 print(mse3)
 
 from IPython.display import display, HTML    
 
-coeff_array = mnb_clf.feature_log_prob_
-                       
-names = X_train.columns       
+feature_array = np.round(rf_clf.feature_importances_.ravel(),3)
 
-print(coeff_array)   
+names = X_train.columns
 
-list1 =[]
-
-for i in range(len(coeff_array[0])):
-    list1.append(abs(coeff_array[0][i] - coeff_array[1][i]))
-    if coeff_array[0][i] >=coeff_array[1][i]:
-        print(names[i], coeff_array[0][i], "Class_0_dominates")
-              
-    else:
-        print(names[i], coeff_array[1][i], "Class_1_dominates")
-        
+print(type(rf_clf.feature_importances_))
 
 def report_coef(names, coef):
-    r = pd.DataFrame( { 'coef': coef, 'more_imp': coef>=0.01, 'names': names  }, index = names )
-
+    r = pd.DataFrame( { 'coef': coef, 'more_imp': coef>=0.01  }, index = names )
     r = r.sort_values(by=['coef'])
-    r.to_csv("MNBImp.csv")
+    r.to_csv("FeatureImp.csv")
     display(r)
    
-    data_range = r[(r['coef'] >= 0.5 )]
-    
-    data_range = data_range[data_range['names'].str.contains("nan") == False]
-    
-    data_range.drop(['names'], axis = 1)
-    
+    data_range = r[(r['coef'] >= 0.005 )]
     ax = data_range['coef'].plot(kind='barh', color=data_range['more_imp'].map(
         {True: 'r', False: 'b'}), figsize=(11, 8))
     
     for container in ax.containers:
         ax.bar_label(container)
 
-array1 = np.asarray(list1)
-
-array1 = np.round(array1, 2)
-        
+    
 report_coef(
   names,
-  array1)
-                 
-              
-
-
-
-
+  feature_array) 

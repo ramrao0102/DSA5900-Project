@@ -99,9 +99,9 @@ lr_Pipeline = Pipeline([('lr', LogisticRegression(max_iter = 200, random_state =
 
 param_grid = [    
     
-    {'lr__penalty' : ['l1', 'l2', 'elasticnet', 'none'],
+    {'lr__penalty' : ['l1', 'l2', 'elasticnet'],
     'lr__C' : [1, 5, 10],
-    'lr__solver' : ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+    'lr__solver' : ['lbfgs', 'liblinear', 'saga']
     }
 
 ]
@@ -111,6 +111,10 @@ gs_lr = GridSearchCV(lr_Pipeline, param_grid, cv = 5, verbose =2)
 gs_lr = gs_lr.fit(X_train, y_train)
 
 print(gs_lr.estimator.get_params())
+
+print(gs_lr.best_index_)
+
+print(gs_lr.best_params_)
 
 cv_results = gs_lr.cv_results_
 
@@ -134,6 +138,10 @@ results_df.to_csv("LRResultsCV.csv")
 best_gs_lr_test_score = gs_lr.score(X_test,  y_test)
 
 print(best_gs_lr_test_score)
+
+print(gs_lr.best_index_)
+
+print(gs_lr.best_params_)
 
 y_predict2 = gs_lr.predict(X_test)
 mse2 = mean_squared_error(y_predict2, y_test, squared=False)
@@ -169,3 +177,38 @@ probs = probs[:, 1]
 fper, tper, thresholds = roc_curve(y_test, probs) 
 plot_roc_curve(fper, tper)
  
+log_reg = LogisticRegression(max_iter = 200, random_state = 42,
+                             penalty = 'l1', C =5, solver = 'liblinear' )
+
+log_reg.fit(X_train, y_train)
+
+y_predict3 = log_reg.predict(X_test)
+mse3 = mean_squared_error(y_predict3, y_test, squared=False)
+
+print(mse3)
+
+names = X_train.columns
+
+# Simple function to evaluate the coefficients of a regression
+  
+from IPython.display import display, HTML    
+
+def report_coef(names,coef,intercept):
+    r = pd.DataFrame( { 'coef': coef, 'positive': coef>=0  }, index = names )
+    r = r.sort_values(by=['coef'])
+    r.to_csv("LogRegCoefficients.csv")
+    display(r)
+    print(f"Intercept: {intercept}")
+    data_range = r[ ((r['coef'] >= 1.00 ) | (r['coef'] <= -1.00))]
+    ax = data_range['coef'].plot(kind='barh', color=data_range['positive'].map(
+        {True: 'r', False: 'b'}), figsize=(12, 8))
+    
+    for container in ax.containers:
+        ax.bar_label(container)
+
+coeff_array = np.round(log_reg.coef_.ravel(),2)
+    
+report_coef(
+  names,
+  coeff_array,
+  log_reg.intercept_)    

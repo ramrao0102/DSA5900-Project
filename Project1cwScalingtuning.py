@@ -98,6 +98,7 @@ print(y_val1.head(), len(y_val1))
 
 dectree_Pipeline = Pipeline([('dt', DecisionTreeClassifier())])
 
+
 param_grid = [    
     
     {'dt__criterion' : ['gini', 'entropy'],
@@ -110,7 +111,12 @@ gs_dt = GridSearchCV(dectree_Pipeline, param_grid, cv = 5, verbose =2)
 
 gs_dt = gs_dt.fit(X_train, y_train)
 
-print(gs_dt.estimator.get_params())
+
+print(gs_dt.best_index_)
+
+print(gs_dt.best_params_)
+
+#print(gs_dt.estimator.get_params())
 
 cv_results = gs_dt.cv_results_
 
@@ -167,4 +173,42 @@ probs = probs[:, 1]
 fper, tper, thresholds = roc_curve(y_test, probs) 
 plot_roc_curve(fper, tper)
 
+#Model with Best Params, this warrants a recheck.
+# I picked the best model from GridSearchCV and retrained on the same set as I was not able to retrieve from GridSearchCV
 
+tree_clf = DecisionTreeClassifier(criterion='entropy', max_depth = 20)
+
+tree_clf.fit(X_train, y_train)
+
+y_predict3 = tree_clf.predict(X_test)
+mse3 = mean_squared_error(y_predict3, y_test, squared=False)
+
+print(mse3)
+
+from IPython.display import display, HTML    
+
+feature_array = np.round(tree_clf.feature_importances_.ravel(),4)
+
+names = X_train.columns
+
+print(type(tree_clf.feature_importances_))
+
+def report_coef(names, coef):
+    r = pd.DataFrame( { 'coef': coef, 'more_imp': coef>=0.01  }, index = names )
+    r = r.sort_values(by=['coef'])
+    r.to_csv("FeatureImp.csv")
+    display(r)
+   
+    data_range = r[(r['coef'] >= 0.001 )]
+    ax = data_range['coef'].plot(kind='barh', color=data_range['more_imp'].map(
+        {True: 'r', False: 'b'}), figsize=(11, 8))
+    
+    for container in ax.containers:
+        ax.bar_label(container)
+
+    
+report_coef(
+  names,
+  feature_array) 
+
+ 

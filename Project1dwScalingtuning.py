@@ -144,6 +144,10 @@ gs_ada  = gs_ada.fit(X_train, y_train)
 
 print(gs_ada.estimator.get_params())
 
+print(gs_ada.best_index_)
+
+print(gs_ada.best_params_)
+
 cv_results = gs_ada.cv_results_
 
 # print results of cross validation training
@@ -199,3 +203,40 @@ probs = probs[:, 1]
 fper, tper, thresholds = roc_curve(y_test, probs) 
 plot_roc_curve(fper, tper)
 
+#Model with Best Params, this warrants a recheck.
+# I picked the best model from GridSearchCV and retrained on the same set as I was not able to retrieve from GridSearchCV
+
+ada_clf = AdaBoostClassifier(learning_rate = 1.0, n_estimators = 100)
+
+ada_clf.fit(X_train, y_train)
+
+y_predict3 = ada_clf.predict(X_test)
+mse3 = mean_squared_error(y_predict3, y_test, squared=False)
+
+print(mse3)
+
+from IPython.display import display, HTML    
+
+feature_array = np.round(ada_clf.feature_importances_.ravel(),4)
+
+names = X_train.columns
+
+print(type(ada_clf.feature_importances_))
+
+def report_coef(names, coef):
+    r = pd.DataFrame( { 'coef': coef, 'more_imp': coef>=0.01  }, index = names )
+    r = r.sort_values(by=['coef'])
+    r.to_csv("FeatureImpADABoost.csv")
+    display(r)
+   
+    data_range = r[(r['coef'] >= 0.001 )]
+    ax = data_range['coef'].plot(kind='barh', color=data_range['more_imp'].map(
+        {True: 'r', False: 'b'}), figsize=(11, 8))
+    
+    for container in ax.containers:
+        ax.bar_label(container)
+
+    
+report_coef(
+  names,
+  feature_array) 
