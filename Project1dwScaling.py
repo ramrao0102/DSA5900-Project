@@ -130,7 +130,7 @@ X_test = scaler.transform(X_test)
 
 #Basic Logistic Regression Model Fitting
 
-ada_clf1 = AdaBoostClassifier(DecisionTreeClassifier(max_depth =1), n_estimators = 20)
+ada_clf1 = AdaBoostClassifier(n_estimators = 20)
 ada_clf1.fit(X_train1, y_train1)
 
 y_predict = ada_clf1.predict(X_train1)

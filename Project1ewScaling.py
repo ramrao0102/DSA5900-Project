@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jun  8 16:09:20 2022
@@ -28,8 +27,12 @@ import csv
 import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_score
@@ -40,7 +43,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import roc_curve  
-from IPython.display import display
+
 
 filename = 'initialmodel2.csv'
 
@@ -54,9 +57,9 @@ df['Defaulted'] = df1
 
 df.drop(['Unnamed: 0'] , axis = 1, inplace =True)
 
-#df.drop(['FirstPaymentDate', 'LastPaymentOn'], axis = 1, inplace =True)
-
 df = df.dropna()
+
+#df.drop(['FirstPaymentDate', 'LastPaymentOn'], axis = 1, inplace =True)
        
 print(df.head())
 
@@ -90,23 +93,52 @@ print(y_train1.head(), len(y_train1))
 
 print(y_val1.head(), len(y_val1))
 
+# Split dataframe into X and y
+
+X = df.iloc[:, :-1]
+
+Y = df.iloc[:,-1].astype(int)
+
+# Split into train and test
+
+X_train, X_test, y_train, y_test = train_test_split(X, Y, random_state = 1, test_size = 0.2)
+
+print(X_train.head(), len(X_train))
+
+print(X_test.head(), len(X_test))
+
+print(y_train.head(), len(y_train))
+
+print(y_test.head(), len(y_test))
+
+# Split train into train1 and val1
+
+X_train1, X_val1, y_train1, y_val1 = train_test_split(X_train, y_train, random_state = 1, test_size = 0.15)
+
+print(X_train1.head(), len(X_train1))
+
+print(X_val1.head(), len(X_val1))
+
+print(y_train1.head(), len(y_train1))
+
+print(y_val1.head(), len(y_val1))
 
 #Basic Logistic Regression Model Fitting
 
-log_reg = LogisticRegression()
-log_reg.fit(X_train1, y_train1)
+rf_clf1 = RandomForestClassifier()
+rf_clf1.fit(X_train1, y_train1)
 
-y_predict = log_reg.predict(X_train1)
+y_predict = rf_clf1.predict(X_train1)
 mse = mean_squared_error(y_predict, y_train1, squared=False)
 
 print(mse)   
 
-y_predict1 = log_reg.predict(X_val1)
+y_predict1 = rf_clf1.predict(X_val1)
 mse1 = mean_squared_error(y_predict1, y_val1, squared=False)
 
 print(mse1)
 
-y_predict2 = log_reg.predict(X_test)
+y_predict2 = rf_clf1.predict(X_test)
 mse2 = mean_squared_error(y_predict2, y_test, squared=False)
 
 print(mse2)
@@ -134,36 +166,8 @@ def plot_roc_curve(fper, tper):
     plt.legend()
     plt.show()
     
-probs = log_reg.predict_proba(X_test)  
+probs = rf_clf1.predict_proba(X_test)  
 probs = probs[:, 1]  
 fper, tper, thresholds = roc_curve(y_test, probs) 
 plot_roc_curve(fper, tper)
 
-
-# Simple function to evaluate the coefficients of a regression
-
-names = X_train.columns
-
-# Simple function to evaluate the coefficients of a regression
-  
-from IPython.display import display, HTML    
-
-def report_coef(names,coef,intercept):
-    r = pd.DataFrame( { 'coef': coef, 'positive': coef>=0  }, index = names )
-    r = r.sort_values(by=['coef'])
-    r.to_csv("LogRegCoefficients.csv")
-    display(r)
-    print(f"Intercept: {intercept}")
-    data_range = r[ ((r['coef'] >= 1.00 ) | (r['coef'] <= -1.00))]
-    ax = data_range['coef'].plot(kind='barh', color=data_range['positive'].map(
-        {True: 'r', False: 'b'}), figsize=(11, 8))
-    
-    for container in ax.containers:
-        ax.bar_label(container)
-
-coeff_array = np.round(log_reg.coef_.ravel(),2)
-    
-report_coef(
-  names,
-  coeff_array,
-  log_reg.intercept_)            
