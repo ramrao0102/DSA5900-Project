@@ -175,8 +175,8 @@ x_axis = [1, 2, 3, 4, 5 ]
 plt.figure(figsize=(4, 4))
 plt.plot(x_axis ,  pca.explained_variance_ratio_)
 
-plt.xlabel('number of components')
-plt.ylabel('cumulative explained variance')
+plt.xlabel('Number of Components')
+plt.ylabel('Explained Variance')
 plt.show()
 
 

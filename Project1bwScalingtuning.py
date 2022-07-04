@@ -86,7 +86,7 @@ mnb_Pipeline = Pipeline([('mnb', MultinomialNB())])
 
 param_grid = {'mnb__alpha': [1e-4, 1e-3, 1e-2, 1e-1, 1]}
 
-gs_mnb = GridSearchCV(mnb_Pipeline, param_grid, cv = 5, verbose =2)
+gs_mnb = GridSearchCV(mnb_Pipeline, param_grid, cv = 5, return_train_score = True, verbose =2)
 
 gs_mnb = gs_mnb.fit(X_train, y_train)
 
@@ -101,15 +101,43 @@ cv_results = gs_mnb.cv_results_
 # print results of cross validation training
 
 results_df = pd.DataFrame(
-                            {'rank' : cv_results['rank_test_score'],
+                            {
+                             'rank_cv' : cv_results['rank_test_score'],
                              'params': cv_results['params'],
-                             'cv_score(mean)' : cv_results['mean_test_score'],
-                             'cv_score(std': cv_results['std_test_score']}
+                             'cv_score(mean_cv)' : cv_results['mean_test_score'],
+                             'cv_score(std_cv)': cv_results['std_test_score'],
+                             'cv_score(mean_train)' : cv_results['mean_train_score'],
+                             'cv_score(std_train)' : cv_results['std_train_score']
+                             }
                             )
 
-results_df = results_df.sort_values(by = ['rank'], ascending = True)
-
 pd.set_option('display.max_colwidth', 100)
+
+list1 = []
+
+for i in results_df.index:
+    list1.append(str(results_df['params'][i]['mnb__alpha']))
+
+results_df = results_df.join(pd.DataFrame({'params1': list1}))
+
+results_df = results_df.sort_values(by = ['rank_cv'], ascending = True)
+
+results_df.to_csv("MNBResultsCV.csv")
+
+plt.plot(results_df['cv_score(mean_train)'], results_df['params1'], label="Train")
+
+plt.plot(results_df['cv_score(mean_cv)'], results_df['params1'], label = "CV")
+
+plt.xlabel('Accuracy')
+
+plt.ylabel('Model Parameter')
+
+plt.legend(loc="upper right")
+
+plt.xlim(0.8372,0.8378)
+
+
+plt.show()
 
 print(results_df)
 

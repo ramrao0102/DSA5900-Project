@@ -58,7 +58,7 @@ df.drop(['Unnamed: 0'] , axis = 1, inplace =True)
 #df.drop(['FirstPaymentDate', 'LastPaymentOn'], axis = 1, inplace =True)
 
 df = df.dropna()
-       
+
 print(df.head())
 
 # Split dataframe into X and y
@@ -101,12 +101,14 @@ param_grid = [
     
     {'lr__penalty' : ['l1', 'l2', 'elasticnet'],
     'lr__C' : [1, 5, 10],
-    'lr__solver' : ['lbfgs', 'liblinear', 'saga']
+    'lr__solver' : ['lbfgs', 'liblinear', 'saga'],
+    'lr__l1_ratio': [0.2, 0.6]
+    
     }
 
 ]
 
-gs_lr = GridSearchCV(lr_Pipeline, param_grid, cv = 5, verbose =2)
+gs_lr = GridSearchCV(lr_Pipeline, param_grid, cv = 5, return_train_score = True, verbose =2)
 
 gs_lr = gs_lr.fit(X_train, y_train)
 
@@ -121,19 +123,47 @@ cv_results = gs_lr.cv_results_
 # print results of cross validation training
 
 results_df = pd.DataFrame(
-                            {'rank' : cv_results['rank_test_score'],
-                             'params': cv_results['params'],
-                             'cv_score(mean)' : cv_results['mean_test_score'],
-                             'cv_score(std': cv_results['std_test_score']}
+                            {
+                            'rank_cv' : cv_results['rank_test_score'],
+                            'params': cv_results['params'],
+                            'cv_score(mean_cv)' : cv_results['mean_test_score'],
+                            'cv_score(std_cv)': cv_results['std_test_score'],
+                            'cv_score(mean_train)' : cv_results['mean_train_score'],
+                            'cv_score(std_train)' : cv_results['std_train_score']
+                            }
                             )
 
-results_df = results_df.sort_values(by = ['rank'], ascending = True)
+list1 =[]
+
+for i in results_df.index:
+    list1.append(str(results_df['params'][i]['lr__penalty']) + ',' + str(results_df['params'][i]['lr__C'])
+                 + ',' + str(results_df['params'][i]['lr__solver']) + ',' + str(results_df['params'][i]['lr__l1_ratio']))
+    
+
+results_df = results_df.join(pd.DataFrame({'params1': list1}))
+
+results_df = results_df.sort_values(by = ['rank_cv'], ascending = True)
+
+results_df.to_csv("TRLRResultsCV.csv")
 
 pd.set_option('display.max_colwidth', 100)
 
 print(results_df)
 
-results_df.to_csv("LRResultsCV.csv")
+plt.figure(figsize=(8,8))
+
+plt.plot(results_df['cv_score(mean_train)'], results_df['params1'], label="Train", linewidth = 5)
+
+plt.plot(results_df['cv_score(mean_cv)'], results_df['params1'], label = "CV", linewidth = 3, dashes=[2, 2])
+
+plt.xlabel('Accuracy')
+plt.ylabel('Model Parameter')
+
+plt.legend(loc="upper right")
+
+plt.show()
+
+results_df.to_csv("TRLRResultsCV.csv")
 
 best_gs_lr_test_score = gs_lr.score(X_test,  y_test)
 
@@ -196,7 +226,7 @@ from IPython.display import display, HTML
 def report_coef(names,coef,intercept):
     r = pd.DataFrame( { 'coef': coef, 'positive': coef>=0  }, index = names )
     r = r.sort_values(by=['coef'])
-    r.to_csv("LogRegCoefficients.csv")
+    r.to_csv("TRLogRegCoefficients.csv")
     display(r)
     print(f"Intercept: {intercept}")
     data_range = r[ ((r['coef'] >= 1.00 ) | (r['coef'] <= -1.00))]

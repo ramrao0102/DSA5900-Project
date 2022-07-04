@@ -138,7 +138,7 @@ param_grid = [
 
 ]
 
-gs_ada = GridSearchCV(adaboost_Pipeline, param_grid, cv = 5, verbose =2)
+gs_ada = GridSearchCV(adaboost_Pipeline, param_grid, cv = 5, return_train_score = True, verbose =2)
 
 gs_ada  = gs_ada.fit(X_train, y_train)
 
@@ -153,15 +153,53 @@ cv_results = gs_ada.cv_results_
 # print results of cross validation training
 
 results_df = pd.DataFrame(
-                            {'rank' : cv_results['rank_test_score'],
+                            { 
+                             'rank_cv' : cv_results['rank_test_score'],
                              'params': cv_results['params'],
-                             'cv_score(mean)' : cv_results['mean_test_score'],
-                             'cv_score(std': cv_results['std_test_score']}
-                            )
+                             'cv_score(mean_cv)' : cv_results['mean_test_score'],
+                             'cv_score(std_cv)': cv_results['std_test_score'],
+                             'cv_score(mean_train)' : cv_results['mean_train_score'],
+                             'cv_score(std_train)' : cv_results['std_train_score']
+                              } 
+                              )
 
-results_df = results_df.sort_values(by = ['rank'], ascending = True)
 
 pd.set_option('display.max_colwidth', 100)
+
+list1 = []
+
+for i in results_df.index:
+    list1.append(str(results_df['params'][i]['ada__n_estimators']) + ',' + str(results_df['params'][i]['ada__learning_rate']))
+    
+
+results_df = results_df.join(pd.DataFrame({'params1': list1}))
+
+results_df = results_df.sort_values(by = ['rank_cv'], ascending = True)
+
+results_df.to_csv("EFResultsCV.csv")
+
+plt.plot(results_df['cv_score(mean_train)'], results_df['params1'], label="Train")
+
+plt.plot(results_df['cv_score(mean_cv)'], results_df['params1'], label = "CV")
+
+plt.xlabel('Accuracy')
+plt.ylabel('Model Parameter')
+
+plt.legend(loc="upper right")
+
+plt.xlim(0,1)
+
+yticks = plt.gca().yaxis.get_major_ticks()
+for i in range(len(yticks)):
+    if i % 4 != 0:
+        yticks[i].set_visible(False)
+
+plt.xticks(fontsize=16)
+
+plt.yticks(fontsize=16)
+
+
+plt.show()
 
 print(results_df)
 
