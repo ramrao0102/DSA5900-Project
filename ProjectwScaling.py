@@ -5,9 +5,10 @@ Created on Sat Jun 18 17:02:02 2022
 @author: ramra
 """
 
-# PCA-2
-
 # This is Ramkishore Rao's DSA 5900 practicuum project
+
+# THIS DOES FURTHER CLEANUP FROM PROJECT.PY
+# AND CREATES A FILE THAT IS LOADED INTO ML MODELS
 
 import pandas as pd
 import numpy as np
@@ -23,7 +24,6 @@ from math import sqrt
 from random import random
 import seaborn as sns
 import csv
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -104,7 +104,7 @@ max6 = df_1['HomeOwnershipType'].max() + 1
 
 print(max1, max2, max3, max4, max5, max6)
 
-df_1.loc[df_1['UseOfLoan'] < -0.5, 'UseOfLoan'] = 9 #not sure what is happening here yet!
+df_1.loc[df_1['UseOfLoan'] < -0.5, 'UseOfLoan'] = 9
 df_1.loc[df_1['Education'] < 0, 'Education'] = max2
 df_1.loc[df_1['MaritalStatus'] < 0, 'MaritalStatus'] = max3
 df_1.loc[df_1['EmploymentStatus'] < 0, 'EmploymentStatus'] = max4
@@ -115,15 +115,13 @@ df_1 = df_1.dropna()
 
 #df_1.drop(columns = 'UseOfLoan')
 
-#df_1.to_csv("initialmodel1.csv")
+df_1.to_csv("initialmodel1.csv")
 
 target_name = "Defaulted"
 
-#df2= df_1
+df2= df_1.drop(columns=[target_name])
 
-df2 = df_1.reset_index(drop = True)    # Apply reset_index function
-
-sc = StandardScaler()
+sc = MinMaxScaler()
 
 # get numeric data
 
@@ -132,75 +130,86 @@ cols = ['AppliedAmount', 'Amount', 'Interest', 'LoanDuration', 'MonthlyPayment',
           'IncomeFromChildSupport', 'IncomeOther', 'IncomeTotal', 'ExistingLiabilities', 'LiabilitiesTotal',
           'DebtToIncome', 'FreeCash', 'MonthlyPaymentDay', 'PlannedInterestTillDate' , 'ExpectedLoss',
           'LossGivenDefault', 'ExpectedReturn', 'ProbabilityOfDefault', 'PrincipalOverdueBySchedule', 
-          'PrincipalPaymentsMade', 'InterestAndPenaltyPaymentsMade', 'PrincipalBalance', 'AmountOfPreviousLoansBeforeLoan', 'Age', target_name ]
+          'PrincipalPaymentsMade', 'InterestAndPenaltyPaymentsMade', 'PrincipalBalance', 'AmountOfPreviousLoansBeforeLoan', 'Age' ]
 
-
-df2 = df2.iloc[0:5000]
-
-print(df2)
-
-cols1 = ['AppliedAmount', 'Amount', 'Interest', 'LoanDuration', 'MonthlyPayment', 'IncomeFromPrincipalEmployer', 
-          'IncomeFromPension' , 'IncomeFromFamilyAllowance' , 'IncomeFromSocialWelfare', 'IncomeFromLeavePay',
-          'IncomeFromChildSupport', 'IncomeOther', 'IncomeTotal', 'ExistingLiabilities', 'LiabilitiesTotal',
-          'DebtToIncome', 'FreeCash', 'MonthlyPaymentDay', 'PlannedInterestTillDate' , 'ExpectedLoss',
-          'LossGivenDefault', 'ExpectedReturn', 'ProbabilityOfDefault', 'PrincipalOverdueBySchedule', 
-          'PrincipalPaymentsMade', 'InterestAndPenaltyPaymentsMade', 'PrincipalBalance', 'AmountOfPreviousLoansBeforeLoan', 'Age']
-
-
-num_d = df2[cols1]
-
-print(type(num_d))
+num_d = df2[cols]
 
 # update the cols with their normalized values
-num_d[num_d.columns] = sc.fit_transform(num_d)
+df2[num_d.columns] = sc.fit_transform(num_d)
 
-#df2['Defaulted'] = df_1_target_popped 
+df2['Defaulted'] = df_1_target_popped 
 
-print(num_d)
+print(df2.head())
 
-pca = PCA(n_components=5)
-principalComponents = pca.fit_transform(num_d)
-principalDf = pd.DataFrame(data = principalComponents
-             , columns = ['principal component 1', 'principal component 2', 'principal component 3',
-                          'principal component 4', 'principal component 5'])
+# now let us check for dummy encoding for categorical variables
 
-print(principalDf)
+dummies = pd.get_dummies(df2['NewCreditCustomer'], prefix = 'NewCreditCustomer', drop_first = True)
 
-finalDf = pd.concat([principalDf, df2[target_name]], axis = 1)
+df2 = pd.concat([df2, dummies] , axis = 1)
 
-print(finalDf)
+df2.drop('NewCreditCustomer', axis = 1, inplace =True)
 
-print(pca.explained_variance_ratio_)
+dummies1 = pd.get_dummies(df2['Country'], prefix = 'Country', drop_first = True)
 
-x_axis = [1, 2, 3, 4, 5 ]
+df2 = pd.concat([df2, dummies1] , axis = 1)
 
-plt.figure(figsize=(4, 4))
-plt.plot(x_axis ,  pca.explained_variance_ratio_)
+df2.drop('Country', axis = 1, inplace =True)
 
-plt.xlabel('Number of Components')
-plt.ylabel('Explained Variance')
-plt.show()
+# Unique Values in EmploymentDurationCurrentEmployer
+
+Cur_empl_duration = list(df2['EmploymentDurationCurrentEmployer'].unique())
+
+print(Cur_empl_duration)
+
+dummies2 = pd.get_dummies(df2['EmploymentDurationCurrentEmployer'], prefix = 'EmploymentDurationCurrentEmployer', 
+                           dummy_na = True, drop_first = True)
+
+df2 = pd.concat([df2, dummies2] , axis = 1)
+
+df2.drop('EmploymentDurationCurrentEmployer', axis = 1, inplace =True)
 
 
-plt.figure(figsize=(11,11))
+dummies3 = pd.get_dummies(df2['ActiveScheduleFirstPaymentReached'], prefix = 'ActiveScheduleFirstPaymentReached', 
+                           dummy_na = True, drop_first = True
+                            )
 
-def myplot(score,coeff,labels=None):
-    xs = score[:,0]
-    ys = score[:,1]
-    n = coeff.shape[0]
-    scalex = .6/(xs.max() - xs.min())
-    scaley =.8/(ys.max() - ys.min())
-    plt.scatter(xs * scalex,ys * scaley,s=5)
-    for i in range(n):
-        plt.arrow(0, 0, coeff[i,0], coeff[i,1],color = 'r',alpha = 0.5)
-        if labels is None:
-            plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, "Var"+str(i+1), color = 'green', ha = 'center', va = 'center')
-        else:
-            plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, labels[i], color = 'g', ha = 'center', va = 'center')
- 
-    plt.xlabel("PC{}".format(1))
-    plt.ylabel("PC{}".format(2))
-    plt.grid()
+df2 = pd.concat([df2, dummies3] , axis = 1)
 
-myplot(principalComponents[:,0:2],np.transpose(pca.components_[0:2, :]),list(num_d.columns))
-plt.show()
+dummies4 = pd.get_dummies(df2['Rating'], prefix = 'Rating', 
+                           dummy_na = True, drop_first = True
+                            )
+
+df2 = pd.concat([df2, dummies4] , axis = 1)
+
+dummies5 = pd.get_dummies(df2['Status'], prefix = 'Status', 
+                           dummy_na = True, drop_first = True
+                            )
+
+df2 = pd.concat([df2, dummies5] , axis = 1)
+
+dummies6 = pd.get_dummies(df2['Restructured'], prefix = 'Restructured', 
+                           dummy_na = True, drop_first = True
+                            )
+
+df2 = pd.concat([df2, dummies6] , axis = 1)
+
+df2.drop(['ActiveScheduleFirstPaymentReached', 'Rating', 'Status', 'Restructured'], axis = 1, inplace =True)
+
+# convert strings to datatime object datatype
+
+# check the reason for coercion for the MaturityDate_Last Column
+
+df2['LoanDate'] = pd.to_datetime(df2['LoanDate'], format = '%Y-%m-%d')
+
+df2['MaturityDate_Last'] = pd.to_datetime(df2['MaturityDate_Last'],  
+                                                         errors = 'coerce', format ='%Y-%m-%d')
+
+df2['diff_days'] = (df2['MaturityDate_Last'] - df2['LoanDate']) / np.timedelta64(1, 'D')
+
+df2.drop(['LoanDate', 'MaturityDate_Last'], axis = 1, inplace =True)
+
+df2.drop(['FirstPaymentDate', 'LastPaymentOn'], axis = 1, inplace =True)
+
+print(df2.head())
+
+df2.to_csv("initialmodel2.csv")

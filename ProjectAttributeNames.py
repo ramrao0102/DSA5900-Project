@@ -12,6 +12,8 @@ Created on Sat Jun  4 17:58:28 2022
 @author: ramra
 """
 
+# CODE TO PRINT ATTRIBUTE NAMES
+
 # This is Ramkishore Rao's DSA 5900 practicuum project
 
 import pandas as pd
